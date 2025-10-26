@@ -1,5 +1,3 @@
-# Lina-Ibouchichene-et-Alexandre-Mégard
-Projet Python : Développement d'une WebApp Interactive avec Streamlit
 import streamlit as st
 import pandas as pd
 import folium
@@ -154,7 +152,6 @@ def show_don_history(df):
 # ===========================================
 # 🖥️ APPLICATION PRINCIPALE
 # ===========================================
-
 def main():
     st.set_page_config(page_title="ONG Explorer 2.0", layout="wide")
 
@@ -165,12 +162,12 @@ def main():
 
     # Onglets de navigation
     tabs = st.tabs([
-            "📍 Carte interactive",
-            "🎯 Par thématique",
-            "💰 Faire un don",
-            "🧾 Mes dons",
-            "ℹ️ À propos"
-        ])
+        "📍 Carte interactive",
+        "🎯 Par thématique",
+        "💰 Faire un don",
+        "🧾 Mes dons",
+        "ℹ️ À propos"
+    ])
 
     # ---- Onglet Carte ----
     with tabs[0]:
@@ -187,13 +184,19 @@ def main():
         filtered_df = filter_data(df, selected_country, selected_domains, search_name)
         st.sidebar.write(f"**{len(filtered_df)} ONG trouvées**")
 
+        # ✅ Conversion des coordonnées en float (pour éviter l'erreur)
+        filtered_df["latitude"] = pd.to_numeric(filtered_df["latitude"], errors="coerce")
+        filtered_df["longitude"] = pd.to_numeric(filtered_df["longitude"], errors="coerce")
+
+        # ✅ Suppression des lignes sans coordonnées valides
+        filtered_df = filtered_df.dropna(subset=["latitude", "longitude"])
+
         st.subheader("Carte des ONG dans le monde")
         m = create_map(filtered_df)
         st_folium(m, width=900, height=500)
 
         with st.expander("📋 Voir les données filtrées"):
             st.dataframe(filtered_df)
-
 
     # ---- Onglet Analyse par pays ----
     with tabs[1]:
@@ -203,13 +206,13 @@ def main():
     with tabs[2]:
         donation_page(df)
 
-    with tabs [3]:
-         show_don_history(df)
-    # ---- Onglet À propos ----
+    # ---- Onglet Mes dons ----
+    with tabs[3]:
+        show_don_history(df)
 
 # ===========================================
 # LANCEMENT
 # ===========================================
-
 if __name__ == "__main__":
     main()
+    
