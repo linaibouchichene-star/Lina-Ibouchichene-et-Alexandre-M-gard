@@ -4,29 +4,34 @@ import folium
 from streamlit_folium import st_folium
 import plotly.express as px
 
-# ===========================================
 # PROFIL UTILISATEUR
-# ===========================================
-def user_login():
-    """Système simple de connexion utilisateur"""
-    if "user_name" not in st.session_state:
-        st.session_state["user_name"] = None
 
-    st.sidebar.subheader("👤 Connexion")
-    if not st.session_state["user_name"]:
-        name_input = st.sidebar.text_input("Votre prénom :")
+def user_login():
+    """Système simple de connexion utilisateur avec vérification e-mail"""
+    if "user_email" not in st.session_state:
+        st.session_state["user_email"] = None
+
+    st.sidebar.subheader("📧 Connexion par e-mail")
+
+    if not st.session_state["user_email"]:
+        email_input = st.sidebar.text_input("Votre adresse e-mail :")
+
         if st.sidebar.button("Se connecter"):
-            st.session_state["user_name"] = name_input
-            st.sidebar.success(f"Bienvenue {name_input} 👋")
+            if "@" in email_input and "." in email_input:
+                st.session_state["user_email"] = email_input
+                st.sidebar.success(f"Bienvenue {email_input} 👋")
+            else:
+                st.sidebar.error("❌ Veuillez entrer une adresse e-mail valide (ex: nom@domaine.com)")
     else:
-        st.sidebar.info(f"Connecté en tant que {st.session_state['user_name']}")
+        st.sidebar.info(f"Connecté en tant que {st.session_state['user_email']}")
         if st.sidebar.button("Se déconnecter"):
-            st.session_state["user_name"] = None
+            st.session_state["user_email"] = None
             st.sidebar.success("Déconnexion réussie.")
 
-# ===========================================
+
+
 # FONCTIONS
-# ===========================================
+
 
 @st.cache_data
 def load_data(csv_path):
@@ -83,15 +88,15 @@ def show_theme_analysis(df):
         st.markdown("---")
 
 
-# ===========================================
-# 💰 PAGE DE DONS
-# ===========================================
+
+#  PAGE DE DONS
+
 def donation_page(df):
     """Page de dons avec enregistrement dans l'historique"""
     st.subheader("💰 Soutenir une association")
 
     # Vérification du profil utilisateur
-    user = st.session_state.get("user_name", None)
+    user = st.session_state.get("user_email", None)
     if not user:
         st.warning("👤 Veuillez vous connecter dans la barre latérale avant de faire un don.")
         return
@@ -132,10 +137,14 @@ def donation_page(df):
     st.markdown("---")
     total_dons = sum(d["montant"] for d in st.session_state["historique_dons"])
     st.metric("Total des dons simulés sur cette session", f"{total_dons} €")
+    
+     # 💾 Sauvegarde de l'historique dans un fichier CSV
+    dons_df = pd.DataFrame(st.session_state["historique_dons"])
+    dons_df.to_csv("historique_dons.csv", index=False)
 
-# ===========================================
-# 🧾 HISTORIQUE DES DONS
-# ===========================================
+
+# HISTORIQUE DES DONS
+
 def show_don_history(df):
     st.subheader("🧾 Historique de mes dons")
 
@@ -148,16 +157,26 @@ def show_don_history(df):
     st.metric("Total des dons", f"{total} €")
     st.dataframe(dons_df[["date", "association", "montant", "domaine"]])
 
+    #  Nouveau graphique Plotly 
+    st.subheader("📈 Répartition des dons par domaine")
+    fig = px.bar(
+        dons_df,
+        x="domaine",
+        y="montant",
+        color="domaine",
+        title="Montant total des dons par domaine",
+        text_auto=True
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-# ===========================================
-# 🖥️ APPLICATION PRINCIPALE
-# ===========================================
+# APPLICATION PRINCIPALE
+
 def main():
     st.set_page_config(page_title="ONG Explorer 2.0", layout="wide")
 
     st.title("ONG Explorer 2.0 — Une vue d'ensemble sur les actions humanitaires mondiales")
 
-    df = load_data("ong_afrique.csv")
+    df = load_data("bdd_ong.csv")
     user_login()
 
     # Onglets de navigation
@@ -166,10 +185,9 @@ def main():
         "🎯 Par thématique",
         "💰 Faire un don",
         "🧾 Mes dons",
-        "ℹ️ À propos"
     ])
 
-    # ---- Onglet Carte ----
+    #  Onglet Carte 
     with tabs[0]:
         st.sidebar.header("🧭 Filtres")
 
@@ -195,7 +213,7 @@ def main():
         m = create_map(filtered_df)
         st_folium(m, width=900, height=500)
 
-        with st.expander("📋 Voir les données filtrées"):
+        with st.expander("Voir les données filtrées"):
             st.dataframe(filtered_df)
 
     # ---- Onglet Analyse par pays ----
@@ -210,9 +228,9 @@ def main():
     with tabs[3]:
         show_don_history(df)
 
-# ===========================================
 # LANCEMENT
-# ===========================================
+
 if __name__ == "__main__":
     main()
+
     
